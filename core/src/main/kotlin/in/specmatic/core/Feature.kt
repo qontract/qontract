@@ -24,6 +24,10 @@ fun parseGherkinStringToFeature(gherkinData: String, filePath: String = ""): Fea
     return parseGherkinDocumentToFeature(gherkinDocument, filePath)
 }
 
+fun String.toFeature(filePath: String = ""): Feature {
+    return parseGherkinStringToFeature(this, filePath)
+}
+
 fun parseGherkinDocumentToFeature(contractGherkinDocument: GherkinDocument, filePath: String): Feature {
     val (name, scenarios) = lex(contractGherkinDocument, filePath)
     return Feature(scenarios = scenarios, name = name)

@@ -1,6 +1,5 @@
 package `in`.specmatic
 
-import org.assertj.core.api.Assertions
 import `in`.specmatic.core.*
 import `in`.specmatic.core.pattern.AnyPattern
 import `in`.specmatic.core.pattern.DeferredPattern
@@ -33,7 +32,7 @@ infix fun String.backwardCompatibleWith(oldContractGherkin: String) {
     assertThat(results.success()).isTrue()
     assertThat(results.failureCount).isZero()
 
-    stubsFrom(oldContractGherkin).workWith(this)
+    stubsFrom(oldContractGherkin).doNotBreakWith(this)
 }
 
 infix fun String.notBackwardCompatibleWith(oldContractGherkin: String) {
@@ -94,7 +93,7 @@ fun testStub(contractGherkin: String, stubRequest: HttpRequest, stubResponse: Ht
 fun stub(stubRequest: HttpRequest, stubResponse: HttpResponse): TestHttpStub =
         TestHttpStub(stubRequest, stubResponse)
 
-private fun stubsFrom(oldContract: String): TestHttpStubData {
+fun stubsFrom(oldContract: String): TestHttpStubData {
     val oldFeature = parseGherkinStringToFeature(oldContract)
 
     val testScenarios = oldFeature.generateBackwardCompatibilityTestScenarios()
@@ -108,7 +107,7 @@ private fun stubsFrom(oldContract: String): TestHttpStubData {
 
 }
 
-private class TestHttpStubData(val oldContract: String, val stubs: List<TestHttpStub>) {
+class TestHttpStubData(val oldContract: String, val stubs: List<TestHttpStub>) {
     fun breakOn(newContract: String) {
         for(stub in stubs) {
             stub.shouldWorkWith(oldContract)
@@ -116,7 +115,7 @@ private class TestHttpStubData(val oldContract: String, val stubs: List<TestHttp
         }
     }
 
-    fun workWith(newContract: String) {
+    fun doNotBreakWith(newContract: String) {
         for(stub in stubs) {
             stub.shouldWorkWith(oldContract)
             stub.shouldWorkWith(newContract)

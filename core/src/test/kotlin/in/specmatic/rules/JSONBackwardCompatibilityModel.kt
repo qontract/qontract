@@ -1,9 +1,11 @@
 package `in`.specmatic.rules
 
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import `in`.specmatic.backwardCompatibleWith
 import `in`.specmatic.notBackwardCompatibleWith
+import `in`.specmatic.stubsFrom
+import `in`.specmatic.testBackwardCompatibility
+import org.assertj.core.api.Assertions.assertThat
 
 class JSONBackwardCompatibilityModel {
     val oldContract = """
@@ -144,7 +146,6 @@ Feature: User API
         newContract notBackwardCompatibleWith oldContract
     }
 
-    @Disabled
     @Test
     fun `adding a key to the response body is backward compatible`() {
         val newContract = """
@@ -161,7 +162,10 @@ Feature: User API
     And response-body (Status)
 """.trimIndent()
 
-        newContract backwardCompatibleWith oldContract
+        val results = newContract.testBackwardCompatibility(oldContract)
+
+        assertThat(results.success()).isTrue()
+        assertThat(results.failureCount).isZero()
     }
 
     @Test

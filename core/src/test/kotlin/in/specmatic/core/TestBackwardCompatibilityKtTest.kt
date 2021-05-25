@@ -1,5 +1,9 @@
 package `in`.specmatic.core
 
+import `in`.specmatic.core.pattern.parsedJSON
+import `in`.specmatic.core.value.Value
+import `in`.specmatic.stubsFrom
+import `in`.specmatic.test.TestExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -1001,5 +1005,109 @@ Then status 200
             println(results.report())
 
         assertThat(results.success()).isTrue()
+    }
+
+    @Test
+    fun `removing a key to the request body should not break existing stubs`() {
+        val oldContract = """
+Feature: User API
+  Scenario: Add user
+    Given json User
+    | name | (string) |
+    | address | (string) |
+    And json Status
+    | status | (string) |
+    When POST /user
+    And request-body (User)
+    Then status 200
+    And response-body (Status)
+""".trimIndent()
+
+        val newContract = """
+Feature: User API
+  Scenario: Add user
+    Given json User
+    | name | (string) |
+    And json Status
+    | status | (string) |
+    When POST /user
+    And request-body (User)
+    Then status 200
+    And response-body (Status)
+""".trimIndent()
+
+        stubsFrom(oldContract).doNotBreakWith(newContract)
+    }
+
+    val oldContract = """
+Feature: User API
+  Scenario: Add user
+    Given json User
+    | name | (string) |
+    And json Status
+    | status | (string) |
+    When POST /user
+    And request-body (User)
+    Then status 200
+    And response-body (Status)
+""".trimIndent()
+
+    @Test
+    fun `adding a key to the response body should not break existing stubs`() {
+        val newContract = """
+Feature: User API
+  Scenario: Add user
+    Given json User
+    | name | (string) |
+    And json Status
+    | status | (string) |
+    | data   | (string) |
+    When POST /user
+    And request-body (User)
+    Then status 200
+    And response-body (Status)
+""".trimIndent()
+
+        stubsFrom(oldContract).doNotBreakWith(newContract)
+    }
+
+    @Test
+    fun `it should not be possible to avoid stubbing a compulsory query param`() {
+        val contract = """
+Feature: User API
+  Scenario: Get user
+    When GET /user?name=(string)
+    Then status 200
+""".trimIndent()
+
+        val feature = contract.toFeature()
+        val response = feature.stubResponse(HttpRequest("GET", path="/user"))
+        println(response)
+        assertThat(response.status).isEqualTo(400)
+    }
+
+    @Test
+    fun `the contract test should not fail when the service returns an extra key in the response`() {
+        val contract = """
+Feature: User API
+  Scenario: Get user
+    Given type User
+    | name | (string) |
+    When GET /user
+    Then status 200
+    And response-body (User)
+""".trimIndent()
+
+        val feature = contract.toFeature()
+
+        val results: Results = feature.executeTests(object : TestExecutor {
+            override fun execute(request: HttpRequest): HttpResponse {
+                return HttpResponse.OK(parsedJSON("{\"name\": \"Jane Doe\", \"id\": 10}"))
+            }
+
+            override fun setServerState(serverState: Map<String, Value>) {}
+        })
+
+        assertThat(results.successCount).isGreaterThan(0)
     }
 }
